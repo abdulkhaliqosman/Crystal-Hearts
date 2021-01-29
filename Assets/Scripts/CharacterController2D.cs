@@ -7,7 +7,8 @@ public class CharacterController2D : MonoBehaviour
 {
     Rigidbody2D rigidBody2D;
     bool onGround = true;
-    
+    bool jump = false;
+
     float moveCooldown = 0;
     float moveInput = 0;
 
@@ -30,8 +31,56 @@ public class CharacterController2D : MonoBehaviour
 
         rigidBody2D.sharedMaterial = Mathf.Abs(moveInput) > 0.01f ? dynamicFriction : staticFriction;
         
-        Debug.Log(rigidBody2D.sharedMaterial);
         rigidBody2D.AddForce(new Vector2(run, 0));
+
+        Debug.Log(onGround);
+
+        Vector2 pos = transform.position;
+
+        
+
+        if (onGround && jump)
+        {
+            Vector2 jumpDir = Vector2.zero;
+            RaycastHit2D downHit = Physics2D.Raycast(pos, Vector2.down, 1.1f); // TODO mask this with only walls
+            
+            if (downHit.collider != null)
+            {
+                jumpDir += Vector2.up;
+            }
+
+            else if (Mathf.Abs(moveInput) > 0.5f)
+            {
+                RaycastHit2D leftHit = Physics2D.Raycast(pos, Vector2.left, 0.6f); // TODO mask this with only walls
+                RaycastHit2D rightHit = Physics2D.Raycast(pos, Vector2.right, 0.6f); // TODO mask this with only walls
+
+                if (leftHit.collider != null)
+                {
+                    jumpDir += Vector2.right;
+                    if(jumpDir.y < 0.1f)
+                    {
+                        jumpDir.y = 1.0f;
+                    }
+                }
+                else if (rightHit.collider != null)
+                {
+                    jumpDir += Vector2.left;
+                    if (jumpDir.y < 0.1f)
+                    {
+                        jumpDir.y = 1.0f;
+                    }
+                }
+
+
+
+
+            }
+
+
+
+            jump = false;
+            rigidBody2D.AddForce(jumpDir * JumpForce, ForceMode2D.Impulse);
+        }
 
     }
 
@@ -39,19 +88,13 @@ public class CharacterController2D : MonoBehaviour
     {
         Vector2 playerInput = context.ReadValue<Vector2>();
 
-        Debug.Log("Move!" + playerInput.x);
+        // Debug.Log("Move!" + playerInput.x);
         moveInput = playerInput.x;
-
-        
     }
 
     public void Jump(InputAction.CallbackContext context)
     {
-        if(onGround && context.ReadValueAsButton())
-        {
-            rigidBody2D.AddForce(new Vector2(0, JumpForce), ForceMode2D.Impulse);
-            onGround = false;
-        }
+        jump = context.ReadValueAsButton();
     }
 
     public void OnCollisionEnter2D(Collision2D collision)
@@ -62,6 +105,21 @@ public class CharacterController2D : MonoBehaviour
     public void OnCollisionExit2D(Collision2D collision)
     {
         onGround = false;
+    }
+
+    public void OnCollisionStay2D(Collision2D collision)
+    {
+        onGround = true;
+        Vector3 colliderPos = collision.gameObject.transform.position;
+
+        List<ContactPoint2D> contacts = new List<ContactPoint2D>();
+
+        collision.GetContacts(contacts);
+
+        if (colliderPos.x < transform.position.x)
+        {
+
+        }
     }
 
 }
